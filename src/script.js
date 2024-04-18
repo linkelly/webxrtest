@@ -34,13 +34,66 @@ object3.position.x = 2
 
 //scene.add(object1, object2, object3)
 
+
+
+// Define trunk parameters
+const trunkRadius = 0.5;
+const trunkHeight = 5;
+const trunkSegments = 8;
+
+// Create an array to hold the layers of the trunk
+const trunkLayers = [];
+
+// Define the number of layers for the trunk
+const numLayers = 5;
+
+// Create each layer of the trunk
+for (let i = 0; i < numLayers; i++) {
+    let layerHeight, layerRadius;
+    if (i === 0) {
+        // For the first layer (layer 0), make it thinner and shorter
+        layerHeight = trunkHeight / (numLayers); // Decrease the height
+        layerRadius = trunkRadius / 2; // Decrease the radius
+    } else {
+        // For other layers, calculate height and radius based on layer number
+        layerHeight = trunkHeight / numLayers; // Calculate the height of each layer
+        layerRadius = trunkRadius * (1 - (i / numLayers)); // Decrease the radius for each layer
+    }
+    const layerMaterial = new THREE.MeshBasicMaterial({ color: i === 0 ? "brown" : "darkgreen" }); // Brown for the first layer, dark green for the rest
+    const layerGeometry = new THREE.CylinderGeometry(layerRadius, layerRadius, layerHeight, trunkSegments);
+    const layer = new THREE.Mesh(layerGeometry, layerMaterial);
+    layer.position.y = (layerHeight * i) - (trunkHeight / 2); // Position each layer accordingly
+    trunkLayers.push(layer); // Add the layer to the array
+}
+
+const trunkGroup = new THREE.Group();
+trunkLayers.forEach(layer => trunkGroup.add(layer) && layer.addEventListener('click', () => {
+    // Redirect to Google.com
+    console.log('Tree trunk clicked');
+    window.location.href = 'https://www.google.com';
+})
+);
+
+const tree = new THREE.Group();
+tree.add(trunkGroup);
+tree.position.set(-1.5, 2.5, 0);
+scene.add(tree);
+
+// Add click event listener to the tree trunk
+trunkGroup.addEventListener('click', () => {
+    console.log('Tree trunk clicked');
+    window.location.href = 'https://www.google.com';
+});
+
+
+
 /**
  * Floor
  */
 const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(50, 50),
     new THREE.MeshStandardMaterial({
-        color: 'green',
+        color: 'grey',
         metalness: 0,
         roughness: 0.5
     })
