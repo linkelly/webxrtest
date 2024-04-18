@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import GUI from 'lil-gui'
 
 /**
@@ -18,11 +19,7 @@ const scene = new THREE.Scene()
 /**
  * Objects
  */
-const object1 = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 16, 16),
-    new THREE.MeshBasicMaterial({ color: '#ff0000' })
-)
-object1.position.x = - 2
+
 
 const object2 = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 16, 16),
@@ -35,7 +32,23 @@ const object3 = new THREE.Mesh(
 )
 object3.position.x = 2
 
-scene.add(object1, object2, object3)
+//scene.add(object1, object2, object3)
+
+/**
+ * Floor
+ */
+const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(50, 50),
+    new THREE.MeshStandardMaterial({
+        color: 'green',
+        metalness: 0,
+        roughness: 0.5
+    })
+)
+floor.receiveShadow = true
+floor.rotation.x = - Math.PI * 0.5
+floor.position.y = -0.1
+scene.add(floor)
 
 /**
  * Raycaster
@@ -71,43 +84,85 @@ window.addEventListener('resize', () =>
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-/**
- * Mouse
- */
-const mouse = new THREE.Vector2()
+const mouse = new THREE.Vector2();
+const objLoader = new OBJLoader();
+let slug; // Define slug as a global variable
 
-window.addEventListener('mousemove', (event) =>
-{
-    mouse.x = event.clientX / sizes.width * 2 - 1
-    mouse.y = - (event.clientY / sizes.height) * 2 + 1
-})
+// Load OBJ file
+objLoader.load(
+    '15910_Great_Grey_Slug_v1.obj',
+    (object) => {
+        slug = object; // Assign the loaded object to slug
+        // Adjust position, rotation, scale as needed
+        object.position.set(0, 0, 0);
+        object.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+        object.scale.set(0.1, 0.1, 0.1);
 
-window.addEventListener('click', () =>
-{
-    if(currentIntersect)
-    {
-        switch(currentIntersect.object)
-        {
-            case object1:
-                console.log('click on object 1')
-                break
+        // Create a basic material
+        const material = new THREE.MeshBasicMaterial({ color: 0xffffff}); //white
 
-            case object2:
-                console.log('click on object 2')
-                break
+        // Apply the material to the loaded object
+        object.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                child.material = material;
+            }
+        });
 
-            case object3:
-                console.log('click on object 3')
-                break
-        }
+        // Add loaded object to the scene
+        scene.add(object);
+
+        // Render scene
+        renderer.render(scene, camera);
+
+        // Add click event listener after the object is loaded
+        window.addEventListener('click', (event) => {
+            // Calculate mouse coordinates relative to the canvas
+            const canvasBounds = canvas.getBoundingClientRect();
+            const mouseX = ((event.clientX - canvasBounds.left) / canvas.clientWidth) * 2 - 1;
+            const mouseY = -((event.clientY - canvasBounds.top) / canvas.clientHeight) * 2 + 1;
+
+            // Update mouse vector
+            mouse.x = mouseX;
+            mouse.y = mouseY;
+
+            // Cast a ray from the camera to the mouse position
+            raycaster.setFromCamera(mouse, camera);
+
+            // Check for intersections with the slug object
+            const intersects = raycaster.intersectObject(slug);
+
+            if (intersects.length > 0) {
+                console.log('slug clicked');
+                // Change color or perform other actions on the slug object
+                const material = new THREE.MeshBasicMaterial({ color: 0xffff00}); //yellow
+                slug.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.material = material;
+                    }
+                });
+                window.open('https://www.ucsc.edu', '_blank');
+                event.preventDefault();
+            }
+        });
+    },
+    (xhr) => {
+        console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+    },
+    (error) => {
+        console.error('An error occurred while loading the OBJ file:', error);
     }
-})
+);
+
+
+
+
 
 /**
  * Camera
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
+camera.position.y = 1
 camera.position.z = 3
 scene.add(camera)
 
@@ -136,21 +191,25 @@ const directionalLight = new THREE.DirectionalLight('#ffffff', 2.1)
 directionalLight.position.set(1, 2, 3)
 scene.add(directionalLight)
 
-/**
- * Model
- */
-const gltfLoader = new GLTFLoader()
 
-let model = null
-gltfLoader.load(
-    './models/Duck/glTF-Binary/Duck.glb',
-    (gltf) =>
-    {
-        model = gltf.scene
-        model.position.y = - 1.2
-        scene.add(model)
-    }
-)
+
+// /**
+//  * Model
+//  */
+// const gltfLoader = new GLTFLoader()
+
+// let model = null
+// gltfLoader.load(
+//     './models/Duck/glTF-Binary/Duck.glb',
+//     (gltf) =>
+//     {
+//         model = gltf.scene
+//         model.position.y = - 1.2
+//         scene.add(model)
+//     }
+// )
+
+
 
 /**
  * Animate
@@ -162,9 +221,9 @@ const tick = () =>
     const elapsedTime = clock.getElapsedTime()
 
     // Animate objects
-    object1.position.y = Math.sin(elapsedTime * 0.3) * 1.5
-    object2.position.y = Math.sin(elapsedTime * 0.8) * 1.5
-    object3.position.y = Math.sin(elapsedTime * 1.4) * 1.5
+    // object1.position.y = Math.sin(elapsedTime * 0.3) * 1.5
+    // object2.position.y = Math.sin(elapsedTime * 0.8) * 1.5
+    // object3.position.y = Math.sin(elapsedTime * 1.4) * 1.5
 
     // Cast a fixed ray
     // const rayOrigin = new THREE.Vector3(- 3, 0, 0)
@@ -208,7 +267,8 @@ const tick = () =>
     // Cast a ray from the mouse and handle events
     raycaster.setFromCamera(mouse, camera)
 
-    const objectsToTest = [object1, object2, object3]
+    //const objectsToTest = [object1, object2, object3]
+    const objectsToTest = scene.children
     const intersects = raycaster.intersectObjects(objectsToTest)
     
     if(intersects.length)
@@ -231,19 +291,19 @@ const tick = () =>
     }
 
     // Test intersect with a model
-    if(model)
-    {
-        const modelIntersects = raycaster.intersectObject(model)
+    // if(model)
+    // {
+    //     const modelIntersects = raycaster.intersectObject(model)
         
-        if(modelIntersects.length)
-        {
-            model.scale.set(1.2, 1.2, 1.2)
-        }
-        else
-        {
-            model.scale.set(1, 1, 1)
-        }
-    }
+    //     if(modelIntersects.length)
+    //     {
+    //         model.scale.set(1.2, 1.2, 1.2)
+    //     }
+    //     else
+    //     {
+    //         model.scale.set(1, 1, 1)
+    //     }
+    // }
 
     // Update controls
     controls.update()
